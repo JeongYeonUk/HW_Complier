@@ -13,33 +13,13 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="헤더 파일\includes">
-      <UniqueIdentifier>{9d040d33-a2c5-48db-9b29-8b7ffbed738b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="소스 파일\src">
       <UniqueIdentifier>{6cab4749-9452-4466-a119-64d7a564f9d4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Label.cpp">
-      <Filter>소스 파일\src</Filter>
-    </ClCompile>
     <ClCompile Include="UcodeInterpreter.cpp">
       <Filter>소스 파일\src</Filter>
     </ClCompile>
-    <ClCompile Include="UcodeiStack.cpp">
-      <Filter>소스 파일\src</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="BASE.h">
-      <Filter>헤더 파일\includes</Filter>
-    </ClInclude>
-    <ClInclude Include="Label.h">
-      <Filter>헤더 파일\includes</Filter>
-    </ClInclude>
-    <ClInclude Include="UcodeiStack.h">
-      <Filter>헤더 파일\includes</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

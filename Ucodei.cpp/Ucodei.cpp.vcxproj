@@ -139,14 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Label.cpp" />
     <ClCompile Include="UcodeInterpreter.cpp" />
-    <ClCompile Include="UcodeiStack.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="BASE.h" />
-    <ClInclude Include="Label.h" />
-    <ClInclude Include="UcodeiStack.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
