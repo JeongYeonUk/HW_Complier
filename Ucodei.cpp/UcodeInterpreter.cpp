@@ -402,25 +402,292 @@ public:
 	virtual ~Interpret() {}
 };
 
-void Interpret::predefinedProc(int)
+void Interpret::predefinedProc(int procIndex)
 {
+	static ifstream dataFile;
+	static int readFirst = TRUE;
+
+	int data, temp;
+
+	if (procIndex == READPROC)
+	{
+		cin >> data;
+		temp = stack.pop();
+		stack[temp] = data;
+		stack.spSet(stack.top() - 4);
+	}
+	else if (procIndex == WRITEPROC)
+	{
+		temp = stack.pop();
+		cout << ' ' << temp;
+		outputFile << ' ' << temp;
+		stack.spSet(stack.top() - 4);
+	}
+	else if (procIndex == LFPROC)
+	{
+		outputFile.put('\n');
+		cout << "\n";
+	}
 }
 
-int Interpret::findAddr(int)
+int Interpret::findAddr(int n)
 {
-	return 0;
+	int temp;
+	if (!instrBuf[n].value1) errmsg("findAddr()", "Lexical level is zero ...");
+	else if (instrBuf[n].value2 < 1) errmsg("findAddr()", "Negative offset ...");
+	for (temp = arBase; instrBuf[n].value1 != stack[temp + 3]; temp = stack[temp])
+	{
+		if ((temp > STACKSIZE) || (temp < 0))
+			cout << "Lexical level : " << instrBuf[n].value1 << ' ' << "Offset		: "
+			<< instrBuf[n].value2 << '\n';
+	}
+	return (temp + instrBuf[n].value2 + 3);
 }
 
 void Interpret::statistic()
 {
+	int i, opcode;
+
+	outputFile << "\n\n\n			" << "##### Statistics #####\n";
+	outputFile << "\n\n		**** Static Instruction Counts ****\n\n";
+	for (i = 0, opcode = notop; opcode < none; ++opcode)
+	{
+		if (staticCnt[opcode] != 0)
+		{
+			outputFile.width(5);
+			outputFile.setf(ios::left, ios::adjustfield);
+			outputFile << opcodeName[opcode] << "  =  ";
+			outputFile.width(5);
+			outputFile.setf(ios::left, ios::adjustfield);
+			outputFile << staticCnt[opcode] << "  ";
+			i++;
+			if (i % 4 == 0) outputFile.put('\n');
+		}
+	}
+	for (i = 0, opcode = notop; opcode < none; ++opcode)
+	{
+		if (dynamicCnt[opcode] != 0)
+		{
+			outputFile.width(5);
+			outputFile.setf(ios::left, ios::adjustfield);
+			outputFile << opcodeName[opcode] << "  =  ";
+			outputFile.width(8);
+			outputFile.setf(ios::left, ios::adjustfield);
+			outputFile << dynamicCnt[opcode] << "  ";
+			i++;
+			if (i % 4 == 0) outputFile << "\n";
+		}
+	}
+	outputFile << "\n\n Executable instruction count =  " << exeCount;
+	outputFile << "\n\n Total execution cycle		 =  " << tcycle;
+	outputFile << "\n";
 }
 
-void Interpret::execute(int)
+void Interpret::execute(int startAddr)
 {
+	int parms, temp, temp1, pc;
+
+	pc = startAddr;
+	cout << " == Executing ... ==\n";
+	cout << " == Result		  ==\n";
+	while (pc >= 0)
+	{
+		dynamicCnt[instrBuf[pc].opcode]++;
+		if (executable[instrBuf[pc].opcode]) exeCount++;
+		tcycle += opcodeCycle[instrBuf[pc].opcode];
+
+		switch (instrBuf[pc].opcode)
+		{
+		case notop:
+			stack.push(!stack.pop());
+			break;
+		case neg:
+			stack.push(-stack.pop());
+			break;
+		case add:
+			stack.push(stack.pop() + stack.pop());
+			break;
+		case divop:
+			temp = stack.pop();
+			if (temp == 0) errmsg("execute()", "Divide Zero ...");
+			stack.push(stack.pop / temp);
+			break;
+		case sub:
+			temp = stack.pop();
+			stack.push(stack.pop() - temp);
+			break;
+		case mult:
+			stack.push(stack.pop() * stack.pop());
+			break;
+		case modop:
+			temp = stack.pop();
+			stack.push(stack.pop() % temp);
+			break;
+		case andop:
+			stack.push(stack.pop() & stack.pop());
+			break;
+		case orop:
+			stack.push(stack.pop() | stack.pop());
+			break;
+		case gt:
+			temp = stack.pop();
+			stack.push(stack.pop() > temp);
+			break;
+		case lt:
+			temp = stack.pop();
+			stack.push(stack.pop() < temp);
+			break;
+		case ge:
+			temp = stack.pop();
+			stack.push(stack.pop() >= temp);
+			break;
+		case le:
+			temp = stack.pop();
+			stack.push(stack.pop() <= temp);
+			break;
+		case eq:
+			temp = stack.pop();
+			stack.push(stack.pop() == temp);
+			break;
+		case ne:
+			temp = stack.pop();
+			stack.push(stack.pop() != temp);
+			break;
+		case swp:
+			temp = stack.pop();
+			temp1 = stack.pop();
+			stack.push(temp);
+			stack.push(temp1);
+			break;
+		case lod:
+			stack.push(stack[findAddr(pc)]);
+			break;
+		case ldc:
+			stack.push(instrBuf[pc].value1);
+			break;
+		case lda:
+			stack.push(findAddr(pc));
+			break;
+		case str:
+			stack[findAddr(pc)] = stack.pop();
+		case ldi:
+			if ((stack.top() <= 0) || (stack.top() > STACKSIZE))
+				errmsg("execute()", "Illegal ldi instrcution ...");
+			temp = stack.pop();
+			stack.push(temp);
+			stack[stack.top()] = stack[temp];
+			break;
+		case sti:
+			temp = stack.pop();
+			stack[stack.pop()] = temp;
+		case ujp:
+			pc = instrBuf[pc].value1 - 1;
+			break;
+		case tjp:
+			if (stack.pop()) pc = instrBuf[pc].value1 - 1;
+			break;
+		case fjp:
+			if (!stack.pop()) pc = instrBuf[pc].value1 - 1;
+			break;
+		case chkh:
+			temp = stack.pop();
+			if (temp > instrBuf[pc].value1)
+				errmsg("execute()", "High check failed...");
+			stack.push(temp);
+			break;
+		case chkl:
+			temp = stack.pop();
+			if (temp < instrBuf[pc].value1)
+				errmsg("execute()", "Low check failed...");
+			stack.push(temp);
+			break;
+		case ldp:
+			parms = stack.top() + 1;
+			stack.spSet(stack.top() + 4);
+			break;
+		case call:
+			if ((temp = instrBuf[pc].value1) < 0) predefinedProc(temp);
+			else
+			{
+				stack[parms + 2] = pc + 1;
+				stack[parms + 1] = arBase;
+				arBase = parms;
+				pc = instrBuf[pc].value1 - 1;
+			}
+			break;
+		case retv:
+			temp = stack.pop();
+		case ret:
+			stack.spSet(arBase - 1);
+			if (instrBuf[pc].opcode == retv)
+				stack.push(temp);
+			pc = stack[arBase + 2] - 1;
+			arBase = stack[arBase + 1];
+			break;
+		case proc:
+			stack.spSet(arBase + instrBuf[pc].value1 + 3);
+			stack[arBase + 3] = instrBuf[pc].value2;
+			for (temp = stack[arBase + 1]; stack[temp + 3] != instrBuf[pc].value3 - 1;
+				temp = stack[temp])
+				stack[arBase] = temp;
+			break;
+		case endop:
+			pc = -2;
+			break;
+		case bgn:
+			stack.spSet(stack.top() + instrBuf[pc].value1);
+			break;
+		case nop:
+		case sym:
+			break;
+		case incop:
+			temp = stack.pop();
+			stack.push(++temp);
+			break;
+		case decop:
+			temp = stack.pop();
+			stack.push(--temp);
+			break;
+		case dup:
+			temp = stack.pop();
+			stack.push(temp);
+			stack.push(temp);
+		case dump:
+			stack.dump();
+			break;
+		default:
+			break;
+		}
+		pc++;
+	}
+	cout << '\n';
+	statistic();
 }
 
 Interpret::Interpret()
 	:stack(STACKSIZE)
 {
+	arBase = 4;
+	tcycle = 0;
+	exeCount = 0;
+}
 
+void main(int argc, char *argv[])
+{
+	Assemble sourceProgram;
+	Interpret binaryProgram;
+
+	if (argc != 3) errmsg("main()", "wrong number of arguments");
+
+	inputFile.open(argv[1], ios::in);
+	if (!inputFile) errmsg("cannot open input file", argv[1]);
+
+	outputFile.open(argv[2], ios::out);
+	if (!outputFile) errmsg("cannot open output file", argv[2]);
+
+	sourceProgram.assemble();
+	binaryProgram.execute(sourceProgram.startAddr);
+
+	inputFile.close();
+	outputFile.close();
 }
